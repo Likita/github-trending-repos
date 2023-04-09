@@ -12,10 +12,13 @@ export interface Repo {
   owner: {
     login: string
   },
-  stargazers_count: number
+  stargazers_count: number,
+  language: string
 }
 
 export enum ViewMode {
   all = 'All',
   starred = 'Starred',
 }
+
+export const FilterAllLang = 'All';
