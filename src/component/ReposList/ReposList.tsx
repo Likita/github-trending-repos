@@ -12,7 +12,7 @@ interface IReposList {
 function ReposList(props: IReposList) {
   const { view } = props;
   let [repoList, setRepoList] = useState<Array<Repo>>([]);
-  let [starList, setStarList] = useState<Array<Repo>>([]);
+  let [starIdList, setStarIdList] = useState<Array<number>>([]);
   let [langList, setLangList] = useState<Set<string>>(new Set());
   let [langFilter, setLangFilter] = useState<string>(FilterAllLang);
 
@@ -22,17 +22,17 @@ function ReposList(props: IReposList) {
       setLangList(response.data.items.reduce((langList: Set<string>, repo: Repo) => repo.language ? langList.add(repo.language) : langList, new Set()));
     });
 
-    const newStarList:Repo[] = [];
+    const newStarIdList = [];
     for (const key in localStorage) {
       if (key.includes('starred-repo-')) {
-        newStarList.push(JSON.parse(localStorage[key]));
+        newStarIdList.push(+localStorage[key]);
       }
     }
-    setStarList(sortRepoList(newStarList));
+    setStarIdList(newStarIdList);
   }, []);
 
   const filteredRepoList = (() => {
-    const showList = (view === ViewMode.all) ?  repoList : starList;
+    const showList = (view === ViewMode.all) ?  repoList : repoList.filter((repo) => starIdList.includes(repo.id));
     if (langFilter === FilterAllLang) return showList;
     return showList.filter((repo) => repo.language === langFilter);
   })();
@@ -41,11 +41,11 @@ function ReposList(props: IReposList) {
     const storedId = `starred-repo-${repo.id}`;
     if (localStorage.getItem(storedId)) {
       localStorage.removeItem(storedId);
-      const newStarList = starList.filter((a) => a.id !== repo.id);
-      setStarList(newStarList);
+      const newStarList = starIdList.filter((id) => id !== repo.id);
+      setStarIdList(newStarList);
     } else {
-      localStorage.setItem(storedId, JSON.stringify(repo));
-      setStarList(sortRepoList([...starList, repo]));
+      localStorage.setItem(storedId, `${repo.id}`);
+      setStarIdList([...starIdList, repo.id]);
     }
   }
 
