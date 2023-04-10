@@ -13,14 +13,12 @@ function ReposList(props: IReposList) {
   const { view } = props;
   let [repoList, setRepoList] = useState<Array<Repo>>([]);
   let [starList, setStarList] = useState<Array<Repo>>([]);
-  let [showList, setShowList] = useState<Array<Repo>>([]);
   let [langList, setLangList] = useState<Set<string>>(new Set());
-  let [filterLang, setFilterLang] = useState<string>(FilterAllLang);
+  let [langFilter, setLangFilter] = useState<string>(FilterAllLang);
 
   useEffect(() => {
     getRepo().then((response: RepoList) => {
       setRepoList(response.data.items);
-      setShowList(response.data.items);
       setLangList(response.data.items.reduce((langList: Set<string>, repo: Repo) => repo.language ? langList.add(repo.language) : langList, new Set()));
     });
 
@@ -33,12 +31,13 @@ function ReposList(props: IReposList) {
     setStarList(sortRepoList(newStarList));
   }, []);
 
-  useEffect(() => {
-    (view === ViewMode.all) ?  setShowList(repoList) : setShowList(starList);
-    setFilterLang(FilterAllLang);
-  }, [view]);
+  const filteredRepoList = (() => {
+    const showList = (view === ViewMode.all) ?  repoList : starList;
+    if (langFilter === FilterAllLang) return showList;
+    return showList.filter((repo) => repo.language === langFilter);
+  })();
 
-  const onStar = (repo: Repo) => {
+  const onStarSelect = (repo: Repo) => {
     const storedId = `starred-repo-${repo.id}`;
     if (localStorage.getItem(storedId)) {
       localStorage.removeItem(storedId);
@@ -50,41 +49,26 @@ function ReposList(props: IReposList) {
     }
   }
 
-  useEffect(() => {
-    if (view === ViewMode.starred) {
-      setShowList(starList);
-      setFilterLang(FilterAllLang);
-    };
-  }, [starList]);
-
-  const onFilterLang = (lang: string) => {
-    const basicData = (view === ViewMode.all) ? repoList : starList;
-    setFilterLang(lang);
-    if (lang === FilterAllLang) {
-      setShowList(basicData);
-    } else {
-      setShowList(basicData.filter((repo) => repo.language === lang));
-    }
-  }
+  const onLangSelect = (lang: string) => setLangFilter(lang)
 
   return (
     <>
       <div className={styles.filterPanel}>
         Language filter:
-        <Button variant={filterLang === FilterAllLang ? 'contained' : 'outlined'}
-                onClick={() => onFilterLang(FilterAllLang)}>
+        <Button variant={langFilter === FilterAllLang ? 'contained' : 'outlined'}
+                onClick={() => onLangSelect(FilterAllLang)}>
           {FilterAllLang}
         </Button>
         {Array.from(langList).map((lang, index) =>
           <Button key={`lang-${index}`}
-                  variant={filterLang === lang ? 'contained' : 'outlined'}
-                  onClick={() => onFilterLang(lang)}>
+                  variant={langFilter === lang ? 'contained' : 'outlined'}
+                  onClick={() => onLangSelect(lang)}>
             {lang}
           </Button>
         )}
       </div>
       <ol className={styles.grid}>
-        {showList.map((repo) =>
+        {filteredRepoList.map((repo) =>
           <li key={repo.id} className={styles.repo}>
             <a href={repo.html_url} target='_blank' rel='noreferrer' className={styles.link}>{repo.name}</a>
             <br/>
@@ -105,7 +89,7 @@ function ReposList(props: IReposList) {
             <Box mt={1}>
               <Button variant={localStorage.getItem(`starred-repo-${repo.id}`) ? 'contained' : 'outlined'}
                       startIcon={<StarBorderIcon />}
-                      onClick={() => onStar({
+                      onClick={() => onStarSelect({
                         id: repo.id,
                         name: repo.name,
                         html_url: repo.html_url,
